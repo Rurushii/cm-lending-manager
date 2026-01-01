@@ -1,124 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CM's Lending</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CM Lending Manager - Privacy Policy</title>
+    <style>
+        /* Simple, clean styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 18px;
+            color: #34495e;
+            margin-top: 25px;
+        }
+        p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .download-btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+        }
+        /* Mobile-specific adjustments */
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
 
-  <div id="settingsModal" class="modal">
-    <div class="modal-content">
-        <h3>⚙️ Global Settings</h3>
-        <label>Penalty Amount (₱)</label>
-        <input type="number" id="setPenaltyAmount" placeholder="50">
-        <label>Penalty Interval (Hours)</label>
-        <input type="number" id="setPenaltyHours" placeholder="5">
-        <button class="save-btn" onclick="saveSettings()">Save & Close</button>
-    </div>
-  </div>
-
-  <div class="app-wrapper">
+<div class="container">
+    <h1>CM Lending Manager</h1>
+    <p><strong>Privacy Policy</strong></p>
     
-    <div class="sidebar">
-        <div class="brand">CM's Lending</div>
-        
-        <div class="borrower-list" id="borrowerTabs">
-            </div>
+    <p>Last updated: January 1, 2026</p>
 
-        <button class="add-new-btn" onclick="showCreateScreen()">+ New Borrower</button>
-        <div class="credit-count" id="creditCount">0/5 Borrowers</div>
-        
-        <button class="settings-btn-side" onclick="openSettings()">⚙️ Settings</button>
+    <p>This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service.</p>
+
+    <h2>1. Data Collection</h2>
+    <p>We do not collect any personal data. All data regarding loans, names, and transactions is stored locally on your device.</p>
+
+    <h2>2. Permissions</h2>
+    <p>The app may request access to storage to save backups of your data. This permission is optional.</p>
+
+    <h2>3. Contact Us</h2>
+    <p>If you have any questions about this Privacy Policy, You can contact us at: [Your Email Here]</p>
+
+    <div style="text-align: center;">
+        <a href="#" class="download-btn">Download for Android</a>
     </div>
+</div>
 
-    <div class="main-content">
-
-        <div id="createScreen" class="screen-panel">
-            <h1>Create New Loan</h1>
-            <div class="section-box">
-                <label>Borrower's Name</label>
-                <input type="text" id="newBorrowerName" placeholder="Juan Dela Cruz">
-
-                <div class="row">
-                    <div class="half">
-                        <label>Principal (₱)</label>
-                        <input type="text" id="newPrincipal" placeholder="10,000" oninput="formatInput(this)">
-                    </div>
-                    <div class="half">
-                        <label>Interest (%)</label>
-                        <input type="number" id="newInterest" value="20">
-                    </div>
-                </div>
-
-                <label>Loan Date (Start)</label>
-                <input type="date" id="newLoanDate">
-
-                <label style="color:#d35400;">Payment Due Date</label>
-                <input type="date" id="newDueDate">
-                <small style="color:#888;">*Penalty starts the day AFTER this date.</small>
-
-                <button class="save-borrower-btn" onclick="saveNewBorrower()">💾 Save Borrower</button>
-            </div>
-        </div>
-
-        <div id="manageScreen" class="screen-panel" style="display:none;">
-            <div class="header-row">
-                <h1 id="displayBorrowerName">Borrower Name</h1>
-                <button class="delete-icon" onclick="deleteActiveBorrower()">🗑️</button>
-            </div>
-
-            <div class="section-box locked-info">
-                <div class="row">
-                    <div class="half">
-                        <label>Total Due</label>
-                        <input type="text" id="manageAmount" readonly>
-                    </div>
-                    <div class="half">
-                        <label>Due Date</label>
-                        <input type="date" id="manageDueDate" readonly>
-                    </div>
-                </div>
-                <input type="hidden" id="managePrincipal">
-                <input type="hidden" id="manageLoanDate">
-            </div>
-
-            <div class="section-box">
-                <h3>Payment Entry</h3>
-                <label>Actual Payment Date</label>
-                <input type="date" id="paymentDate">
-
-                <label>Actual Payment Time</label>
-                <input type="time" id="paymentTime">
-
-                <label style="color:#27ae60;">Amount Paid Now (₱)</label>
-                <input type="text" id="amountPaid" placeholder="Leave blank if full payment" oninput="formatInput(this)">
-                
-                <div class="rule-box">
-                    <span>⚠️</span>
-                    <span id="ruleText">Rule: ₱50 per 5 hours</span>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button class="calc-btn" onclick="calculate()">Calculate Status</button>
-                <button id="finalDownloadBtn" class="download-btn" onclick="downloadSmartReceipt()" style="display:none;">📥 Download Receipt & Update</button>
-                <button class="copy-btn" onclick="copyToClipboard()">📋 Copy for Messenger</button>
-            </div>
-
-            <div id="output" class="output-box"></div>
-            <div id="breakdown" class="breakdown-box"></div>
-        </div>
-
-    </div>
-  </div>
-
-  <div id="final-receipt-image" style="position: absolute; left: -9999px; width: 400px; background: white; padding: 30px; color: black; font-family: 'Courier New', Courier, monospace; border: 1px solid #000;">
-      <div id="receipt-content"></div>
-  </div>
-
-  <script src="script.js"></script>
 </body>
 </html>
