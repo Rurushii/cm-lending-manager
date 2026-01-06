@@ -2,7 +2,10 @@
 let borrowers = [],
   activeIndex = -1,
   globalPenaltyAmt = 50,
-  globalPenaltyHrs = 5;
+  globalPenaltyHrs = 5,
+  lenderSig1 = "", 
+  lenderSig2 = "";
+
 let isCurrentPenalty = false,
   isPartial = false,
   receiptSummaryHTML = "";
@@ -13,16 +16,12 @@ window.onload = function () {
   loadBorrowers();
   renderTabs();
   showCreateScreen();
-
+  
   const today = new Date().toISOString().split("T")[0];
-  document.getElementById("newLoanDate").value = today;
-  document.getElementById("paymentDate").value = today;
-
-  // Set min date to avoid calendar issues
-  const minDate = "2024-01-01";
-  document.getElementById("newLoanDate").setAttribute("min", minDate);
-  document.getElementById("newDueDate").setAttribute("min", minDate);
-  document.getElementById("paymentDate").setAttribute("min", minDate);
+  if(document.getElementById("newLoanDate")) {
+    document.getElementById("newLoanDate").value = today;
+    document.getElementById("paymentDate").value = today;
+  }
 };
 
 // --- DATA MANAGEMENT ---
@@ -39,7 +38,6 @@ function saveBorrowersToStorage() {
 function renderTabs() {
   const container = document.getElementById("borrowerTabs");
   container.innerHTML = "";
-
   borrowers.forEach((b, index) => {
     const btn = document.createElement("button");
     btn.className = `tab-btn ${index === activeIndex ? "active" : ""}`;
@@ -47,11 +45,10 @@ function renderTabs() {
     btn.onclick = () => selectBorrower(index);
     container.appendChild(btn);
   });
-
-  document.getElementById("creditCount").innerText = `${borrowers.length}/5 Borrowers`;
-
+  
+  document.getElementById("creditCount").innerText = `${borrowers.length} Borrowers (Unlimited)`;
   const addBtn = document.querySelector(".add-new-btn");
-  if (addBtn) addBtn.disabled = borrowers.length >= 5;
+  if(addBtn) addBtn.disabled = false;
 }
 
 // --- SCREEN SWITCHING ---
@@ -60,33 +57,56 @@ function showCreateScreen() {
   renderTabs();
   document.getElementById("createScreen").style.display = "block";
   document.getElementById("manageScreen").style.display = "none";
+  
   document.getElementById("newBorrowerName").value = "";
+  document.getElementById("newAddress").value = "";
+  document.getElementById("newContactNumber").value = "";
   document.getElementById("newPrincipal").value = "";
   document.getElementById("newDueDate").value = "";
+  document.getElementById("newRelativeInfo").value = "";
+  document.getElementById("newValidID").value = "";
+  document.getElementById("newSignature").value = "";
+  
   resetManageInputs();
 }
 
-function saveNewBorrower() {
+function getBase64(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) resolve(null);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+async function saveNewBorrower() {
   const name = document.getElementById("newBorrowerName").value;
+  const address = document.getElementById("newAddress").value;
+  const contact = document.getElementById("newContactNumber").value;
+  const relative = document.getElementById("newRelativeInfo").value;
   const princ = parseNumber(document.getElementById("newPrincipal").value);
   const rate = parseFloat(document.getElementById("newInterest").value);
   const loanDate = document.getElementById("newLoanDate").value;
   const dueDate = document.getElementById("newDueDate").value;
+  
+  const idFile = document.getElementById("newValidID").files[0];
+  const sigFile = document.getElementById("newSignature").files[0];
 
-  if (!name || !princ || !dueDate) return alert("Please fill in all fields.");
+  if (!name || !princ || !dueDate) return alert("Please fill in Name, Principal, and Due Date.");
+
+  const idBase64 = await getBase64(idFile);
+  const sigBase64 = await getBase64(sigFile);
 
   const total = princ + princ * (rate / 100);
 
   borrowers.push({
-    name,
-    principal: princ,
-    interestRate: rate,
-    totalWithInterest: total,
-    balance: total,
-    loanDate,
-    dueDate,
-    penaltyAmt: globalPenaltyAmt,
-    penaltyHrs: globalPenaltyHrs,
+    name, address, contact, relative,
+    principal: princ, interestRate: rate,
+    totalWithInterest: total, balance: total,
+    loanDate, dueDate,
+    penaltyAmt: globalPenaltyAmt, penaltyHrs: globalPenaltyHrs,
+    validID: idBase64, signature: sigBase64
   });
 
   saveBorrowersToStorage();
@@ -99,10 +119,23 @@ function selectBorrower(index) {
   const b = borrowers[index];
   document.getElementById("createScreen").style.display = "none";
   document.getElementById("manageScreen").style.display = "block";
+
   document.getElementById("displayBorrowerName").innerText = b.name;
+  document.getElementById("displayContact").innerText = b.contact ? `📞 ${b.contact}` : "📞 No contact";
   document.getElementById("manageAmount").value = formatNumber(b.balance);
   document.getElementById("manageDueDate").value = b.dueDate;
   document.getElementById("ruleText").innerText = `Rule: ₱${b.penaltyAmt} per ${b.penaltyHrs} hours`;
+
+  const imgID = document.getElementById("viewValidID");
+  const txtID = document.getElementById("noID");
+  if (b.validID) { imgID.src = b.validID; imgID.style.display = "block"; txtID.style.display = "none"; } 
+  else { imgID.style.display = "none"; txtID.style.display = "block"; }
+
+  const imgSig = document.getElementById("viewSignature");
+  const txtSig = document.getElementById("noSig");
+  if (b.signature) { imgSig.src = b.signature; imgSig.style.display = "block"; txtSig.style.display = "none"; } 
+  else { imgSig.style.display = "none"; txtSig.style.display = "block"; }
+
   resetManageInputs();
 }
 
@@ -113,7 +146,6 @@ function resetManageInputs() {
   document.getElementById("amountPaid").value = "";
   document.getElementById("output").style.display = "none";
   document.getElementById("breakdown").style.display = "none";
-  document.getElementById("finalDownloadBtn").style.display = "none";
   document.getElementById("output").innerHTML = "";
 }
 
@@ -125,13 +157,142 @@ function deleteActiveBorrower() {
   }
 }
 
-// --- CALCULATE ---
+// --- NEW PREVIEW LOGIC ---
+async function previewContract() {
+  const lender = document.getElementById("lenderName").value || "_________________";
+  const name = document.getElementById("newBorrowerName").value || "_________________";
+  const address = document.getElementById("newAddress").value || "_________________";
+  const contact = document.getElementById("newContactNumber").value || "_________________";
+  const relative = document.getElementById("newRelativeInfo").value || "_________________";
+  
+  const princ = parseNumber(document.getElementById("newPrincipal").value);
+  const rate = parseFloat(document.getElementById("newInterest").value);
+  const dueDate = document.getElementById("newDueDate").value || "_________________";
+  
+  const interestAmt = princ * (rate/100);
+  const total = princ + interestAmt;
+  
+  const sigFile = document.getElementById("newSignature").files[0];
+  let sigSrc = "";
+  if(sigFile) sigSrc = await getBase64(sigFile);
+
+  // Fill Template
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById("cDate").innerText = dateStr;
+  document.getElementById("cLender").innerText = lender;
+  document.getElementById("cBorrower").innerText = name;
+  document.getElementById("cAddress").innerText = address;
+  document.getElementById("cContact").innerText = contact;
+  
+  document.getElementById("cPrincipal").innerText = formatNumber(princ);
+  document.getElementById("cRate").innerText = rate;
+  document.getElementById("cInterest").innerText = formatNumber(interestAmt);
+  document.getElementById("cTotal").innerText = formatNumber(total);
+  document.getElementById("cDueDate").innerText = dueDate;
+  document.getElementById("cPenaltyAmt").innerText = globalPenaltyAmt;
+  document.getElementById("cPenaltyHrs").innerText = globalPenaltyHrs;
+  document.getElementById("cRelative").innerText = relative;
+
+  // Signatures
+  const sigImgEl = document.getElementById("cSigImage");
+  if(sigSrc) { sigImgEl.src = sigSrc; sigImgEl.style.display = "block"; } 
+  else { sigImgEl.style.display = "none"; }
+
+  const l1Img = document.getElementById("cLender1Sig");
+  if(lenderSig1) { l1Img.src = lenderSig1; l1Img.style.display = "block"; } 
+  else { l1Img.style.display = "none"; }
+
+  const l2Img = document.getElementById("cLender2Sig");
+  if(lenderSig2) { l2Img.src = lenderSig2; l2Img.style.display = "block"; } 
+  else { l2Img.style.display = "none"; }
+
+  // Copy Source to Display Area
+  const source = document.getElementById("contract-template-source").innerHTML;
+  document.getElementById("contract-display-area").innerHTML = source;
+
+  document.getElementById("contractModal").style.display = "flex";
+}
+
+function closeContractModal() {
+  document.getElementById("contractModal").style.display = "none";
+}
+
+// 2. Download Image (THE FIX)
+async function downloadContractImage() {
+  alert("Rendering Contract... Please wait a moment.");
+  
+  const content = document.getElementById("contract-display-area");
+  
+  // Create a temporary container that is FULLY visible (but behind content)
+  // This forces the browser to render the full height
+  const cloneContainer = document.createElement("div");
+  cloneContainer.style.position = "absolute";
+  cloneContainer.style.top = "0";
+  cloneContainer.style.left = "0";
+  cloneContainer.style.width = "800px"; // Fixed width for A4 consistency
+  cloneContainer.style.background = "white";
+  cloneContainer.style.zIndex = "-9999"; 
+  cloneContainer.style.padding = "40px"; // Add padding to clone
+  
+  // Force body overflow to visible so html2canvas can see everything
+  const originalOverflow = document.body.style.overflow;
+  document.body.style.overflow = "visible";
+
+  // Clone content
+  cloneContainer.innerHTML = content.innerHTML;
+  document.body.appendChild(cloneContainer);
+
+  // --- WAIT FOR IMAGES TO LOAD ---
+  const images = cloneContainer.querySelectorAll("img");
+  const promises = Array.from(images).map(img => {
+    // Only wait if there is a real source
+    if (img.src && img.src !== window.location.href && img.complete === false) {
+        return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+    }
+    return Promise.resolve();
+  });
+  await Promise.all(promises);
+  
+  // Extra safety delay for rendering
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  try {
+    // Scroll to top to ensure clean capture
+    window.scrollTo(0,0);
+    
+    const canvas = await html2canvas(cloneContainer, {
+      scale: 2, 
+      useCORS: true,
+      height: cloneContainer.scrollHeight, // Force full height
+      windowHeight: cloneContainer.scrollHeight, // Force window height
+      scrollY: 0
+    });
+
+    const link = document.createElement("a");
+    const name = document.getElementById("newBorrowerName").value || "Contract";
+    link.download = `Contract_${name}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    
+  } catch(e) {
+    alert("Error downloading: " + e.message);
+  } finally {
+    // Cleanup
+    document.body.removeChild(cloneContainer);
+    document.body.style.overflow = originalOverflow; // Restore scroll bar state
+  }
+}
+
+// --- CALCULATION LOGIC ---
 function calculate() {
   const b = borrowers[activeIndex];
   const payDate = document.getElementById("paymentDate").value;
   const payTime = document.getElementById("paymentTime").value;
 
-  if (!payDate || !payTime) return alert("Enter payment date/time");
+  if (!payDate || !payTime) {
+    alert("Enter payment date/time");
+    return false;
+  }
 
   const start = new Date(b.dueDate + "T00:00:00");
   start.setDate(start.getDate() + 1);
@@ -189,56 +350,96 @@ function calculate() {
   } else {
     document.getElementById("breakdown").style.display = "none";
   }
-  document.getElementById("finalDownloadBtn").style.display = "block";
+  return true;
 }
 
-// --- MISSING FUNCTIONS RESTORED ---
-
-// 1. SETTINGS
+// --- SETTINGS & HELPERS ---
 function loadSettings() {
-  const sA = localStorage.getItem("gA"), sH = localStorage.getItem("gH");
+  const sA = localStorage.getItem("gA");
+  const sH = localStorage.getItem("gH");
+  const sL1 = localStorage.getItem("lenderSig1");
+  const sL2 = localStorage.getItem("lenderSig2");
+
   if (sA) globalPenaltyAmt = parseFloat(sA);
   if (sH) globalPenaltyHrs = parseFloat(sH);
+  if (sL1) lenderSig1 = sL1;
+  if (sL2) lenderSig2 = sL2;
+
   document.getElementById("setPenaltyAmount").value = globalPenaltyAmt;
   document.getElementById("setPenaltyHours").value = globalPenaltyHrs;
 }
-function openSettings() { document.getElementById("settingsModal").style.display = "block"; }
-function saveSettings() {
+
+function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
+
+async function saveSettings() {
   globalPenaltyAmt = parseFloat(document.getElementById("setPenaltyAmount").value);
   globalPenaltyHrs = parseFloat(document.getElementById("setPenaltyHours").value);
   localStorage.setItem("gA", globalPenaltyAmt);
   localStorage.setItem("gH", globalPenaltyHrs);
+
+  const file1 = document.getElementById("setLenderSig1").files[0];
+  const file2 = document.getElementById("setLenderSig2").files[0];
+
+  if (file1) {
+    lenderSig1 = await getBase64(file1);
+    localStorage.setItem("lenderSig1", lenderSig1);
+  }
+  if (file2) {
+    lenderSig2 = await getBase64(file2);
+    localStorage.setItem("lenderSig2", lenderSig2);
+  }
+
+  alert("Settings & Signatures Saved!");
   document.getElementById("settingsModal").style.display = "none";
 }
+
 window.onclick = function (e) {
   if (e.target == document.getElementById("settingsModal")) document.getElementById("settingsModal").style.display = "none";
 };
 
-// 2. DOWNLOAD RECEIPT
 async function downloadSmartReceipt() {
-  const b = borrowers[activeIndex];
-  const name = b.name;
-  const summary = document.getElementById("output").innerText;
+  const calcSuccess = calculate();
+  if (!calcSuccess) return;
 
-  // Generate Receipt HTML
-  document.getElementById("receipt-content").innerHTML = `
+  const b = borrowers[activeIndex];
+  const summary = document.getElementById("output").innerText;
+  
+  const rContainer = document.createElement("div");
+  rContainer.style.position = "absolute";
+  rContainer.style.top = "0";
+  rContainer.style.left = "0";
+  rContainer.style.width = "400px";
+  rContainer.style.background = "white";
+  rContainer.style.padding = "30px";
+  rContainer.style.color = "black";
+  rContainer.style.zIndex = "-9999";
+  
+  // Fix overflow during receipt capture too
+  const originalOverflow = document.body.style.overflow;
+  document.body.style.overflow = "visible";
+
+  rContainer.innerHTML = `
     <h2 style="text-align:center;">OFFICIAL RECEIPT</h2>
     <p style="text-align:center;font-size:12px;">CM's LENDING</p><hr>
     <p><b>Date:</b> ${new Date().toLocaleString()}</p>
-    <p><b>Borrower:</b> ${name}</p>
+    <p><b>Borrower:</b> ${b.name}</p>
     <p><b>Due Date:</b> ${b.dueDate}</p><hr>
     <pre style="white-space:pre-wrap;font-family:inherit;">${summary}</pre><hr>
     ${isCurrentPenalty ? `<p><b>PENALTY SUMMARY:</b></p><pre style="font-size:12px;white-space:pre-wrap;font-family:inherit;">${receiptSummaryHTML}</pre><hr>` : ''}
     <p style="text-align:center;font-weight:bold;">THANK YOU!</p>`;
+    
+  document.body.appendChild(rContainer);
+  await new Promise(resolve => setTimeout(resolve, 300));
 
-  // Capture
-  const canvas = await html2canvas(document.getElementById("final-receipt-image"));
+  const canvas = await html2canvas(rContainer);
   const link = document.createElement("a");
-  link.download = `Receipt_${name}.png`;
+  link.download = `Receipt_${b.name}.png`;
   link.href = canvas.toDataURL("image/png");
   link.click();
+  
+  document.body.removeChild(rContainer);
+  document.body.style.overflow = originalOverflow; // Restore
 
-  // Update Data Logic
   const grandStr = document.getElementById("output").innerHTML.match(/Total Due: ₱([\d,.]+)/)[1];
   const grand = parseNumber(grandStr);
   const paidStr = document.getElementById("output").innerHTML.match(/Paying: ₱([\d,.]+)/)[1];
@@ -254,18 +455,16 @@ async function downloadSmartReceipt() {
     alert(`Partial payment recorded. New Balance: ₱${formatNumber(rem)}`);
     b.balance = rem;
     saveBorrowersToStorage();
-    selectBorrower(activeIndex); // Refresh view
+    selectBorrower(activeIndex);
   }
 }
 
-// 3. COPY TO MESSENGER
 function copyToClipboard() {
   const b = borrowers[activeIndex];
   const text = `📌 *CM's LENDING*\n👤 ${b.name}\n📅 ${new Date().toLocaleDateString()}\n\n${document.getElementById("output").innerText}\n\nThank you!`;
   navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
 }
 
-// --- HELPERS ---
 function formatInput(i) {
   let v = i.value.replace(/[^0-9.]/g, "");
   const p = v.split(".");
@@ -276,28 +475,16 @@ function formatInput(i) {
 function parseNumber(v) { if (!v) return 0; return parseFloat(v.toString().replace(/,/g, "")) || 0; }
 function formatNumber(n) { return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-// --- MOBILE SIDEBAR LOGIC ---
+// Mobile Sidebar
 const menuBtn = document.getElementById("menuToggle");
 const sidebar = document.querySelector(".sidebar");
 const overlay = document.getElementById("sidebarOverlay");
-
 if (menuBtn && sidebar && overlay) {
-  menuBtn.onclick = () => {
-    sidebar.classList.add("show");
-    overlay.classList.add("show");
-  };
-  overlay.onclick = () => {
-    sidebar.classList.remove("show");
-    overlay.classList.remove("show");
-  };
+  menuBtn.onclick = () => { sidebar.classList.add("show"); overlay.classList.add("show"); };
+  overlay.onclick = () => { sidebar.classList.remove("show"); overlay.classList.remove("show"); };
 }
-
-// Mobile Auto-Close
 const originalSelectBorrower = selectBorrower;
 selectBorrower = function (index) {
   originalSelectBorrower(index);
-  if (window.innerWidth <= 768) {
-    sidebar.classList.remove("show");
-    overlay.classList.remove("show");
-  }
+  if (window.innerWidth <= 768) { sidebar.classList.remove("show"); overlay.classList.remove("show"); }
 };
