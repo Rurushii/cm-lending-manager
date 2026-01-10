@@ -3,8 +3,7 @@ let borrowers = [],
   activeIndex = -1,
   globalPenaltyAmt = 50,
   globalPenaltyHrs = 5,
-  lenderSig1 = "", 
-  lenderSig2 = "";
+  lenderSig = ""; // Changed to Single Signature
 
 // --- INITIALIZATION ---
 window.onload = function () {
@@ -27,7 +26,11 @@ function loadBorrowers() {
 }
 
 function saveBorrowersToStorage() {
-  localStorage.setItem("lendingBorrowers", JSON.stringify(borrowers));
+  try {
+    localStorage.setItem("lendingBorrowers", JSON.stringify(borrowers));
+  } catch (e) {
+    alert("Storage Full! Clear some data.");
+  }
   renderTabs();
 }
 
@@ -42,8 +45,6 @@ function renderTabs() {
     container.appendChild(btn);
   });
   document.getElementById("creditCount").innerText = `${borrowers.length} Borrowers (Unlimited)`;
-  const addBtn = document.querySelector(".add-new-btn");
-  if(addBtn) addBtn.disabled = false;
 }
 
 // --- SCREEN SWITCHING ---
@@ -55,19 +56,45 @@ function showCreateScreen() {
   resetManageInputs();
 }
 
-function getBase64(file) {
-  return new Promise((resolve, reject) => {
-    if (!file) resolve(null);
+// --- IMAGE COMPRESSOR ---
+function compressImage(file, maxWidth = 600, quality = 0.5) {
+  return new Promise((resolve) => {
+    if (!file) { resolve(null); return; }
+    
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    };
+    reader.onerror = () => resolve(null);
   });
 }
 
 async function saveNewBorrower() {
   const name = document.getElementById("newBorrowerName").value;
   if (!name) return alert("Please enter a name.");
+
+  const btn = document.querySelector(".save-borrower-btn");
+  btn.innerText = "Processing...";
+  btn.disabled = true;
 
   const b = {
     name: name,
@@ -87,16 +114,21 @@ async function saveNewBorrower() {
   b.totalWithInterest = b.principal + (b.principal * (b.interestRate / 100));
   b.balance = b.totalWithInterest;
 
-  const idFile = document.getElementById("newValidID").files[0];
+  // IMPORTANT: We do NOT save the ID image anymore. Too heavy.
   const sigFile = document.getElementById("newSignature").files[0];
-  b.validID = await getBase64(idFile);
-  b.signature = await getBase64(sigFile);
+  
+  // Only compress and save the signature
+  b.signature = await compressImage(sigFile);
 
   borrowers.push(b);
   saveBorrowersToStorage();
   
   document.getElementById("newBorrowerName").value = "";
   document.getElementById("newPrincipal").value = "";
+  
+  btn.innerText = "💾 Save Data";
+  btn.disabled = false;
+
   selectBorrower(borrowers.length - 1);
   alert("Borrower Saved!");
 }
@@ -112,13 +144,7 @@ function selectBorrower(index) {
   document.getElementById("displayContact").innerText = b.contact ? `📞 ${b.contact}` : "📞 No contact";
   document.getElementById("manageAmount").value = formatNumber(b.balance);
   document.getElementById("manageDueDate").value = b.dueDate;
-  document.getElementById("ruleText").innerText = `Rule: ₱${b.penaltyAmt} per ${b.penaltyHrs} hours`;
-
-  const imgID = document.getElementById("viewValidID");
-  const txtID = document.getElementById("noID");
-  if (b.validID) { imgID.src = b.validID; imgID.style.display = "block"; txtID.style.display = "none"; } 
-  else { imgID.style.display = "none"; txtID.style.display = "block"; }
-
+  
   const imgSig = document.getElementById("viewSignature");
   const txtSig = document.getElementById("noSig");
   if (b.signature) { imgSig.src = b.signature; imgSig.style.display = "block"; txtSig.style.display = "none"; } 
@@ -144,144 +170,87 @@ function deleteActiveBorrower() {
 }
 
 // ==========================================
-// PREVIEW & DOWNLOAD CONTRACT (STABLE PDF)
+// DIRECT PDF DOWNLOAD (CONTRACT)
 // ==========================================
 
-async function previewContract() {
-  // Fill Data
-  const lender = document.getElementById("lenderName").value || "_________________";
-  const name = document.getElementById("newBorrowerName").value || "_________________";
-  const address = document.getElementById("newAddress").value || "_________________";
-  const contact = document.getElementById("newContactNumber").value || "_________________";
-  const relative = document.getElementById("newRelativeInfo").value || "_________________";
-  
-  const princ = parseNumber(document.getElementById("newPrincipal").value);
-  const rate = parseFloat(document.getElementById("newInterest").value);
-  const dueDate = document.getElementById("newDueDate").value || "_________________";
-  const interestAmt = princ * (rate/100);
-  const total = princ + interestAmt;
-  
-  const sigFile = document.getElementById("newSignature").files[0];
-  let sigSrc = "";
-  if(sigFile) sigSrc = await getBase64(sigFile);
+async function downloadContractDirectly() {
+  if (typeof html2pdf === 'undefined') return alert("Library not ready. Please wait a moment.");
 
-  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  document.getElementById("cDate").innerText = dateStr;
-  document.getElementById("cLender").innerText = lender;
-  document.getElementById("cBorrower").innerText = name;
-  document.getElementById("cAddress").innerText = address;
-  document.getElementById("cContact").innerText = contact;
-  
-  document.getElementById("cPrincipal").innerText = formatNumber(princ);
-  document.getElementById("cRate").innerText = rate;
-  document.getElementById("cInterest").innerText = formatNumber(interestAmt);
-  document.getElementById("cTotal").innerText = formatNumber(total);
-  document.getElementById("cDueDate").innerText = dueDate;
-  document.getElementById("cPenaltyAmt").innerText = globalPenaltyAmt;
-  document.getElementById("cPenaltyHrs").innerText = globalPenaltyHrs;
-  document.getElementById("cRelative").innerText = relative;
+  alert("Preparing Contract PDF...");
 
-  const sigImgEl = document.getElementById("cSigImage");
-  if(sigSrc) { sigImgEl.src = sigSrc; sigImgEl.style.display = "block"; } else { sigImgEl.style.display = "none"; }
+  // 1. Gather Data
+  const data = {
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    lender: document.getElementById("lenderName").value || "_________________",
+    name: document.getElementById("newBorrowerName").value || "_________________",
+    address: document.getElementById("newAddress").value || "_________________",
+    contact: document.getElementById("newContactNumber").value || "_________________",
+    relative: document.getElementById("newRelativeInfo").value || "_________________",
+    princ: parseNumber(document.getElementById("newPrincipal").value),
+    rate: parseFloat(document.getElementById("newInterest").value),
+    dueDate: document.getElementById("newDueDate").value || "_________________",
+    penAmt: globalPenaltyAmt,
+    penHrs: globalPenaltyHrs
+  };
 
-  const l1Img = document.getElementById("cLender1Sig");
-  if(lenderSig1) { l1Img.src = lenderSig1; l1Img.style.display = "block"; } else { l1Img.style.display = "none"; }
+  const interestAmt = data.princ * (data.rate/100);
+  const total = data.princ + interestAmt;
 
-  const l2Img = document.getElementById("cLender2Sig");
-  if(lenderSig2) { l2Img.src = lenderSig2; l2Img.style.display = "block"; } else { l2Img.style.display = "none"; }
-
-  // Inject content into preview
-  const source = document.getElementById("contract-template-source").innerHTML;
-  document.getElementById("contract-display-area").innerHTML = source;
-
-  document.getElementById("contractModal").style.display = "flex";
-}
-
-function closeContractModal() {
-  document.getElementById("contractModal").style.display = "none";
-}
-
-// *** STABLE PDF DOWNLOAD FUNCTION ***
-async function downloadContractPDF() {
-  if (typeof html2pdf === 'undefined') return alert("PDF Library not loaded. Please check internet connection.");
-
-  alert("Generating PDF... Please wait.");
-
-  // Create a CLEAN CLONE for PDF generation (Prevents styling issues)
+  // 2. Clone Template
   const source = document.getElementById('contract-template-source');
   const clone = document.createElement('div');
   clone.innerHTML = source.innerHTML;
   
-  // Style the clone to be perfect for A4
-  clone.style.width = '800px'; 
-  clone.style.padding = '40px';
-  clone.style.background = 'white';
-  clone.style.color = 'black';
-  
-  // Update the clone's values with current data (since template is static)
-  // We re-run the fill logic on the CLONE specifically
-  const data = {
-      date: document.getElementById("cDate").innerText,
-      lender: document.getElementById("cLender").innerText,
-      borrower: document.getElementById("cBorrower").innerText,
-      address: document.getElementById("cAddress").innerText,
-      contact: document.getElementById("cContact").innerText,
-      princ: document.getElementById("cPrincipal").innerText,
-      rate: document.getElementById("cRate").innerText,
-      int: document.getElementById("cInterest").innerText,
-      total: document.getElementById("cTotal").innerText,
-      due: document.getElementById("cDueDate").innerText,
-      penAmt: document.getElementById("cPenaltyAmt").innerText,
-      penHrs: document.getElementById("cPenaltyHrs").innerText,
-      rel: document.getElementById("cRelative").innerText
-  };
-
-  // Manually update clone text (Safe way)
+  // 3. Fill Clone
   clone.querySelector("#cDate").innerText = data.date;
   clone.querySelector("#cLender").innerText = data.lender;
-  clone.querySelector("#cBorrower").innerText = data.borrower;
+  clone.querySelector("#cBorrower").innerText = data.name;
   clone.querySelector("#cAddress").innerText = data.address;
   clone.querySelector("#cContact").innerText = data.contact;
-  clone.querySelector("#cPrincipal").innerText = data.princ;
+  clone.querySelector("#cPrincipal").innerText = formatNumber(data.princ);
   clone.querySelector("#cRate").innerText = data.rate;
-  clone.querySelector("#cInterest").innerText = data.int;
-  clone.querySelector("#cTotal").innerText = data.total;
-  clone.querySelector("#cDueDate").innerText = data.due;
+  clone.querySelector("#cInterest").innerText = formatNumber(interestAmt);
+  clone.querySelector("#cTotal").innerText = formatNumber(total);
+  clone.querySelector("#cDueDate").innerText = data.dueDate;
   clone.querySelector("#cPenaltyAmt").innerText = data.penAmt;
   clone.querySelector("#cPenaltyHrs").innerText = data.penHrs;
-  clone.querySelector("#cRelative").innerText = data.rel;
+  clone.querySelector("#cRelative").innerText = data.relative;
 
-  // Handle Images in Clone
-  const sigSrc = document.getElementById("cSigImage").src;
-  if(document.getElementById("cSigImage").style.display !== 'none') {
-      clone.querySelector("#cSigImage").src = sigSrc;
-      clone.querySelector("#cSigImage").style.display = 'block';
-  } else {
-      clone.querySelector("#cSigImage").style.display = 'none';
+  // 4. Handle Images (COMPRESS THEM FIRST)
+  const sigFile = document.getElementById("newSignature").files[0];
+  let borrowerSig = "";
+  if(sigFile) borrowerSig = await compressImage(sigFile);
+
+  const sigImgEl = clone.querySelector("#cSigImage");
+  if(borrowerSig) { sigImgEl.src = borrowerSig; sigImgEl.style.display = "block"; } 
+  else { sigImgEl.style.display = "none"; }
+
+  // Lender Single Sig
+  const lenImgEl = clone.querySelector("#cLenderSig");
+  const lenLine = clone.querySelector("#cLenderLine");
+  
+  if(lenderSig) { 
+      lenImgEl.src = lenderSig; 
+      lenImgEl.style.display = "block";
+      lenLine.style.display = "none"; // Hide line if sig exists
+  } else { 
+      lenImgEl.style.display = "none";
+      lenLine.style.display = "block"; // Show line for manual signing
   }
 
-  if(lenderSig1) { clone.querySelector("#cLender1Sig").src = lenderSig1; clone.querySelector("#cLender1Sig").style.display = 'block'; }
-  else { clone.querySelector("#cLender1Sig").style.display = 'none'; }
-
-  if(lenderSig2) { clone.querySelector("#cLender2Sig").src = lenderSig2; clone.querySelector("#cLender2Sig").style.display = 'block'; }
-  else { clone.querySelector("#cLender2Sig").style.display = 'none'; }
-
-  // PDF Configuration
-  const name = document.getElementById("newBorrowerName").value || "Contract";
+  // 5. Generate PDF
   const opt = {
     margin: 0.5,
-    filename: `Contract_${name}.pdf`,
+    filename: `Contract_${data.name}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    // SCALE 1.5 is safer for mobile phones than 2
-    html2canvas: { scale: 1.5, useCORS: true, letterRendering: true },
+    html2canvas: { scale: 1.5, useCORS: true },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  // Generate from the clean clone
   html2pdf().set(opt).from(clone).save().then(() => {
-      alert("PDF Downloaded Successfully!");
-  }).catch((err) => {
-      alert("Error generating PDF: " + err.message);
+    // Success
+  }).catch(err => {
+    alert("PDF Error: " + err.message);
   });
 }
 
@@ -340,13 +309,11 @@ function calculate() {
 function loadSettings() {
   const sA = localStorage.getItem("gA");
   const sH = localStorage.getItem("gH");
-  const sL1 = localStorage.getItem("lenderSig1");
-  const sL2 = localStorage.getItem("lenderSig2");
+  const sL = localStorage.getItem("lenderSig"); // Single Sig
 
   if (sA) globalPenaltyAmt = parseFloat(sA);
   if (sH) globalPenaltyHrs = parseFloat(sH);
-  if (sL1) lenderSig1 = sL1;
-  if (sL2) lenderSig2 = sL2;
+  if (sL) lenderSig = sL;
 
   document.getElementById("setPenaltyAmount").value = globalPenaltyAmt;
   document.getElementById("setPenaltyHours").value = globalPenaltyHrs;
@@ -360,11 +327,10 @@ async function saveSettings() {
   localStorage.setItem("gA", globalPenaltyAmt);
   localStorage.setItem("gH", globalPenaltyHrs);
 
-  const f1 = document.getElementById("setLenderSig1").files[0];
-  const f2 = document.getElementById("setLenderSig2").files[0];
+  const f = document.getElementById("setLenderSig").files[0];
 
-  if (f1) { lenderSig1 = await getBase64(f1); localStorage.setItem("lenderSig1", lenderSig1); }
-  if (f2) { lenderSig2 = await getBase64(f2); localStorage.setItem("lenderSig2", lenderSig2); }
+  // COMPRESS BEFORE SAVING
+  if (f) { lenderSig = await compressImage(f); localStorage.setItem("lenderSig", lenderSig); }
 
   alert("Settings & Signatures Saved!");
   document.getElementById("settingsModal").style.display = "none";
@@ -405,13 +371,12 @@ async function downloadSmartReceipt() {
     margin: 0.2,
     filename: `Receipt_${data.b.name}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 1.5, useCORS: true }, // Reduced scale for stability
+    html2canvas: { scale: 1.5, useCORS: true },
     jsPDF: { unit: 'in', format: [4, 6], orientation: 'portrait' } 
   };
 
   alert("Generating Receipt PDF...");
   
-  // Convert using library
   await html2pdf().set(opt).from(element).save().then(() => {
       // Logic Update only AFTER successful download
       const rem = data.grand - data.paid;
