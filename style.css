@@ -47,8 +47,7 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 8px 0 30px rgba(0,0,0,0.08);
-  box-sizing: border-box;
-  z-index: 100;
+  box-sizing: border-box; /* Fix for padding */
 }
 
 .brand {
@@ -98,6 +97,7 @@ body {
   cursor: pointer;
 }
 
+/* Settings Button (Was Missing!) */
 .settings-btn-side {
   background: transparent;
   border: 2px dashed #b2bec3;
@@ -136,7 +136,6 @@ body {
   padding: 45px;
   border-radius: 28px;
   box-shadow: var(--shadow-soft);
-  margin-bottom: 50px;
 }
 
 /* --- FORMS --- */
@@ -154,7 +153,10 @@ h1 {
   margin-bottom: 20px;
 }
 
-.section-box { margin-bottom: 20px; }
+.section-box {
+  margin-bottom: 20px;
+}
+
 .row { display: flex; gap: 20px; }
 .half { flex: 1; }
 
@@ -164,18 +166,18 @@ label {
   color: var(--text-muted);
   display: block;
   margin-bottom: 5px;
-  margin-top: 10px;
 }
 
 input {
   width: 100%;
   padding: 15px;
-  margin-bottom: 5px;
+  margin-bottom: 15px;
   border-radius: 14px;
   border: 2px solid #edf2ff;
   font-size: 15px;
   box-sizing: border-box;
 }
+
 input:focus { outline: none; border-color: var(--pink); }
 
 .locked-info input { background-color: #f8f9fa; border-color: transparent; pointer-events: none; }
@@ -197,10 +199,6 @@ button { cursor: pointer; }
   border-radius: 16px;
   font-weight: 700;
   border: none;
-}
-
-.download-btn {
-  background: var(--success); /* Green for payment */
 }
 
 .copy-btn {
@@ -235,31 +233,23 @@ button { cursor: pointer; }
   display: none;
 }
 .breakdown-box { display: none; margin-top: 15px; }
-.rule-box { background: #fff8e1; color: #d35400; padding: 10px; border-radius: 8px; font-size: 13px; display: flex; gap: 5px; }
 
-/* --- MODAL (CENTERING FIX) --- */
+/* --- MODAL --- */
 .modal {
-  display: none; /* JS toggles this */
+  display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5); /* Slightly darker for better focus */
+  background: rgba(0,0,0,0.5); /* Darker overlay */
   z-index: 500;
-  
-  /* This centers the child element perfectly */
-  align-items: center;
-  justify-content: center;
 }
 
 .modal-content {
   background: white;
+  margin: 15% auto;
   padding: 35px;
   border-radius: 28px;
-  width: 90%; /* Responsive width */
-  max-width: 400px;
-  max-height: 90vh; /* Prevent it from being taller than screen */
-  overflow-y: auto; /* Scroll if content is too tall */
-  margin: 0; /* Remove the 15% margin that was pushing it up */
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  max-width: 350px;
+  text-align: center;
 }
 
 .save-btn {
@@ -275,6 +265,7 @@ button { cursor: pointer; }
 /* ======================================
    MOBILE STYLES
    ====================================== */
+
 .menu-toggle {
   display: none;
   position: fixed;
@@ -302,8 +293,12 @@ button { cursor: pointer; }
 
 @media (max-width: 768px) {
   body { overflow: auto; height: auto; } /* Allow scrolling on mobile */
-  .app-wrapper { flex-direction: column; height: auto; }
   
+  .app-wrapper {
+    flex-direction: column;
+    height: auto;
+  }
+
   .menu-toggle { display: block; }
 
   .sidebar {
@@ -315,10 +310,18 @@ button { cursor: pointer; }
     transition: left 0.3s ease;
     z-index: 400;
   }
+
   .sidebar.show { left: 0; }
   .sidebar-overlay.show { display: block; }
 
-  .main-content { padding: 80px 20px 40px; }
-  .screen-panel { padding: 25px; border-radius: 20px; }
+  .main-content {
+    padding: 80px 20px 40px; /* Top padding for hamburger button */
+  }
+
+  .screen-panel {
+    padding: 25px;
+    border-radius: 20px;
+  }
+
   .row { flex-direction: column; gap: 0; }
 }

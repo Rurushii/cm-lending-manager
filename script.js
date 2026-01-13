@@ -2,9 +2,16 @@
 let borrowers = [],
   activeIndex = -1,
   globalPenaltyAmt = 50,
+<<<<<<< HEAD
   globalPenaltyHrs = 5,
   lenderSig1 = "", 
   lenderSig2 = "";
+=======
+  globalPenaltyHrs = 5;
+let isCurrentPenalty = false,
+  isPartial = false,
+  receiptSummaryHTML = "";
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
 
 // --- INITIALIZATION ---
 window.onload = function () {
@@ -12,12 +19,16 @@ window.onload = function () {
   loadBorrowers();
   renderTabs();
   showCreateScreen();
-  
+
   const today = new Date().toISOString().split("T")[0];
-  if(document.getElementById("newLoanDate")) {
-    document.getElementById("newLoanDate").value = today;
-    document.getElementById("paymentDate").value = today;
-  }
+  document.getElementById("newLoanDate").value = today;
+  document.getElementById("paymentDate").value = today;
+
+  // Set min date to avoid calendar issues
+  const minDate = "2024-01-01";
+  document.getElementById("newLoanDate").setAttribute("min", minDate);
+  document.getElementById("newDueDate").setAttribute("min", minDate);
+  document.getElementById("paymentDate").setAttribute("min", minDate);
 };
 
 // --- DATA MANAGEMENT ---
@@ -38,6 +49,7 @@ function saveBorrowersToStorage() {
 function renderTabs() {
   const container = document.getElementById("borrowerTabs");
   container.innerHTML = "";
+
   borrowers.forEach((b, index) => {
     const btn = document.createElement("button");
     btn.className = `tab-btn ${index === activeIndex ? "active" : ""}`;
@@ -45,9 +57,15 @@ function renderTabs() {
     btn.onclick = () => selectBorrower(index);
     container.appendChild(btn);
   });
+<<<<<<< HEAD
   document.getElementById("creditCount").innerText = `${borrowers.length} Borrowers (Unlimited)`;
+=======
+
+  document.getElementById("creditCount").innerText = `${borrowers.length}/5 Borrowers`;
+
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   const addBtn = document.querySelector(".add-new-btn");
-  if(addBtn) addBtn.disabled = false;
+  if (addBtn) addBtn.disabled = borrowers.length >= 5;
 }
 
 // --- SCREEN SWITCHING ---
@@ -56,6 +74,7 @@ function showCreateScreen() {
   renderTabs();
   document.getElementById("createScreen").style.display = "block";
   document.getElementById("manageScreen").style.display = "none";
+<<<<<<< HEAD
   resetManageInputs();
 }
 
@@ -122,6 +141,37 @@ async function saveNewBorrower() {
   b.signature = await compressImage(sigFile);
 
   borrowers.push(b);
+=======
+  document.getElementById("newBorrowerName").value = "";
+  document.getElementById("newPrincipal").value = "";
+  document.getElementById("newDueDate").value = "";
+  resetManageInputs();
+}
+
+function saveNewBorrower() {
+  const name = document.getElementById("newBorrowerName").value;
+  const princ = parseNumber(document.getElementById("newPrincipal").value);
+  const rate = parseFloat(document.getElementById("newInterest").value);
+  const loanDate = document.getElementById("newLoanDate").value;
+  const dueDate = document.getElementById("newDueDate").value;
+
+  if (!name || !princ || !dueDate) return alert("Please fill in all fields.");
+
+  const total = princ + princ * (rate / 100);
+
+  borrowers.push({
+    name,
+    principal: princ,
+    interestRate: rate,
+    totalWithInterest: total,
+    balance: total,
+    loanDate,
+    dueDate,
+    penaltyAmt: globalPenaltyAmt,
+    penaltyHrs: globalPenaltyHrs,
+  });
+
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   saveBorrowersToStorage();
   
   document.getElementById("newBorrowerName").value = "";
@@ -140,17 +190,19 @@ function selectBorrower(index) {
   const b = borrowers[index];
   document.getElementById("createScreen").style.display = "none";
   document.getElementById("manageScreen").style.display = "block";
-
   document.getElementById("displayBorrowerName").innerText = b.name;
-  document.getElementById("displayContact").innerText = b.contact ? `📞 ${b.contact}` : "📞 No contact";
   document.getElementById("manageAmount").value = formatNumber(b.balance);
   document.getElementById("manageDueDate").value = b.dueDate;
+<<<<<<< HEAD
   
   const imgSig = document.getElementById("viewSignature");
   const txtSig = document.getElementById("noSig");
   if (b.signature) { imgSig.src = b.signature; imgSig.style.display = "block"; txtSig.style.display = "none"; } 
   else { imgSig.style.display = "none"; txtSig.style.display = "block"; }
 
+=======
+  document.getElementById("ruleText").innerText = `Rule: ₱${b.penaltyAmt} per ${b.penaltyHrs} hours`;
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   resetManageInputs();
 }
 
@@ -159,6 +211,11 @@ function resetManageInputs() {
   document.getElementById("paymentDate").value = today;
   document.getElementById("amountPaid").value = "";
   document.getElementById("output").style.display = "none";
+<<<<<<< HEAD
+=======
+  document.getElementById("breakdown").style.display = "none";
+  document.getElementById("finalDownloadBtn").style.display = "none";
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   document.getElementById("output").innerHTML = "";
 }
 
@@ -170,6 +227,7 @@ function deleteActiveBorrower() {
   }
 }
 
+<<<<<<< HEAD
 // ==========================================
 // DIRECT PDF DOWNLOAD (CONTRACT)
 // ==========================================
@@ -255,15 +313,15 @@ async function downloadContractDirectly() {
 }
 
 // --- CALCULATION LOGIC (UPDATED FOR MESSENGER LIST) ---
+=======
+// --- CALCULATE ---
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
 function calculate() {
   const b = borrowers[activeIndex];
   const payDate = document.getElementById("paymentDate").value;
   const payTime = document.getElementById("paymentTime").value;
 
-  if (!payDate || !payTime) {
-    alert("Enter payment date/time");
-    return false;
-  }
+  if (!payDate || !payTime) return alert("Enter payment date/time");
 
   const start = new Date(b.dueDate + "T00:00:00");
   start.setDate(start.getDate() + 1);
@@ -313,6 +371,7 @@ function calculate() {
     ${isPartial ? `<p style="color:#d35400;">Remaining: ₱${formatNumber(bal)}</p>` : ""}
   `;
   out.style.display = "block";
+<<<<<<< HEAD
   
   return { b, grand, paid, totalPen, isCurrentPenalty, penaltyCount, timelineText, bal };
 }
@@ -322,34 +381,54 @@ function loadSettings() {
   const sA = localStorage.getItem("gA");
   const sH = localStorage.getItem("gH");
   const sL = localStorage.getItem("lenderSig");
+=======
 
+  if (count > 0) {
+    document.getElementById("breakdown").innerHTML = detailed;
+    document.getElementById("breakdown").style.display = "block";
+  } else {
+    document.getElementById("breakdown").style.display = "none";
+  }
+  document.getElementById("finalDownloadBtn").style.display = "block";
+}
+
+// --- MISSING FUNCTIONS RESTORED ---
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
+
+// 1. SETTINGS
+function loadSettings() {
+  const sA = localStorage.getItem("gA"), sH = localStorage.getItem("gH");
   if (sA) globalPenaltyAmt = parseFloat(sA);
   if (sH) globalPenaltyHrs = parseFloat(sH);
+<<<<<<< HEAD
   if (sL) lenderSig = sL;
 
+=======
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   document.getElementById("setPenaltyAmount").value = globalPenaltyAmt;
   document.getElementById("setPenaltyHours").value = globalPenaltyHrs;
 }
-
-function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
-
-async function saveSettings() {
+function openSettings() { document.getElementById("settingsModal").style.display = "block"; }
+function saveSettings() {
   globalPenaltyAmt = parseFloat(document.getElementById("setPenaltyAmount").value);
   globalPenaltyHrs = parseFloat(document.getElementById("setPenaltyHours").value);
   localStorage.setItem("gA", globalPenaltyAmt);
   localStorage.setItem("gH", globalPenaltyHrs);
+<<<<<<< HEAD
 
   const f = document.getElementById("setLenderSig").files[0];
   if (f) { lenderSig = await compressImage(f); localStorage.setItem("lenderSig", lenderSig); }
 
   alert("Settings & Signatures Saved!");
+=======
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
   document.getElementById("settingsModal").style.display = "none";
 }
-
 window.onclick = function (e) {
   if (e.target == document.getElementById("settingsModal")) document.getElementById("settingsModal").style.display = "none";
 };
 
+<<<<<<< HEAD
 // --- DOWNLOAD RECEIPT AS PDF ---
 async function downloadSmartReceipt() {
   const data = calculate();
@@ -407,6 +486,53 @@ async function downloadSmartReceipt() {
 }
 
 // --- COPY TO MESSENGER (FIXED) ---
+=======
+// 2. DOWNLOAD RECEIPT
+async function downloadSmartReceipt() {
+  const b = borrowers[activeIndex];
+  const name = b.name;
+  const summary = document.getElementById("output").innerText;
+
+  // Generate Receipt HTML
+  document.getElementById("receipt-content").innerHTML = `
+    <h2 style="text-align:center;">OFFICIAL RECEIPT</h2>
+    <p style="text-align:center;font-size:12px;">CM's LENDING</p><hr>
+    <p><b>Date:</b> ${new Date().toLocaleString()}</p>
+    <p><b>Borrower:</b> ${name}</p>
+    <p><b>Due Date:</b> ${b.dueDate}</p><hr>
+    <pre style="white-space:pre-wrap;font-family:inherit;">${summary}</pre><hr>
+    ${isCurrentPenalty ? `<p><b>PENALTY SUMMARY:</b></p><pre style="font-size:12px;white-space:pre-wrap;font-family:inherit;">${receiptSummaryHTML}</pre><hr>` : ''}
+    <p style="text-align:center;font-weight:bold;">THANK YOU!</p>`;
+
+  // Capture
+  const canvas = await html2canvas(document.getElementById("final-receipt-image"));
+  const link = document.createElement("a");
+  link.download = `Receipt_${name}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+
+  // Update Data Logic
+  const grandStr = document.getElementById("output").innerHTML.match(/Total Due: ₱([\d,.]+)/)[1];
+  const grand = parseNumber(grandStr);
+  const paidStr = document.getElementById("output").innerHTML.match(/Paying: ₱([\d,.]+)/)[1];
+  const paid = parseNumber(paidStr);
+  const rem = grand - paid;
+
+  if (rem <= 0) {
+    alert("Paid in full! Borrower removed.");
+    borrowers.splice(activeIndex, 1);
+    saveBorrowersToStorage();
+    showCreateScreen();
+  } else {
+    alert(`Partial payment recorded. New Balance: ₱${formatNumber(rem)}`);
+    b.balance = rem;
+    saveBorrowersToStorage();
+    selectBorrower(activeIndex); // Refresh view
+  }
+}
+
+// 3. COPY TO MESSENGER
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
 function copyToClipboard() {
   const data = calculate(); // Get fresh calculation
   if (!data) return;
@@ -446,6 +572,7 @@ Thank you! 🙏`;
   navigator.clipboard.writeText(text).then(() => alert("Copied details to clipboard!"));
 }
 
+// --- HELPERS ---
 function formatInput(i) {
   let v = i.value.replace(/[^0-9.]/g, "");
   const p = v.split(".");
@@ -456,6 +583,7 @@ function formatInput(i) {
 function parseNumber(v) { if (!v) return 0; return parseFloat(v.toString().replace(/,/g, "")) || 0; }
 function formatNumber(n) { return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
+<<<<<<< HEAD
 const menuBtn = document.getElementById("menuToggle");
 const sidebar = document.querySelector(".sidebar");
 const overlay = document.getElementById("sidebarOverlay");
@@ -463,3 +591,30 @@ if (menuBtn) {
   menuBtn.onclick = () => { sidebar.classList.add("show"); overlay.classList.add("show"); };
   overlay.onclick = () => { sidebar.classList.remove("show"); overlay.classList.remove("show"); };
 }
+=======
+// --- MOBILE SIDEBAR LOGIC ---
+const menuBtn = document.getElementById("menuToggle");
+const sidebar = document.querySelector(".sidebar");
+const overlay = document.getElementById("sidebarOverlay");
+
+if (menuBtn && sidebar && overlay) {
+  menuBtn.onclick = () => {
+    sidebar.classList.add("show");
+    overlay.classList.add("show");
+  };
+  overlay.onclick = () => {
+    sidebar.classList.remove("show");
+    overlay.classList.remove("show");
+  };
+}
+
+// Mobile Auto-Close
+const originalSelectBorrower = selectBorrower;
+selectBorrower = function (index) {
+  originalSelectBorrower(index);
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove("show");
+    overlay.classList.remove("show");
+  }
+};
+>>>>>>> parent of c1f6580 (added contracts but will fix later)
