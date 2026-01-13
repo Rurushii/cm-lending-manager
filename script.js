@@ -3,7 +3,8 @@ let borrowers = [],
   activeIndex = -1,
   globalPenaltyAmt = 50,
   globalPenaltyHrs = 5,
-  lenderSig = ""; // Changed to Single Signature
+  lenderSig1 = "", 
+  lenderSig2 = "";
 
 // --- INITIALIZATION ---
 window.onload = function () {
@@ -45,6 +46,8 @@ function renderTabs() {
     container.appendChild(btn);
   });
   document.getElementById("creditCount").innerText = `${borrowers.length} Borrowers (Unlimited)`;
+  const addBtn = document.querySelector(".add-new-btn");
+  if(addBtn) addBtn.disabled = false;
 }
 
 // --- SCREEN SWITCHING ---
@@ -116,8 +119,6 @@ async function saveNewBorrower() {
 
   // IMPORTANT: We do NOT save the ID image anymore. Too heavy.
   const sigFile = document.getElementById("newSignature").files[0];
-  
-  // Only compress and save the signature
   b.signature = await compressImage(sigFile);
 
   borrowers.push(b);
@@ -216,7 +217,7 @@ async function downloadContractDirectly() {
   clone.querySelector("#cPenaltyHrs").innerText = data.penHrs;
   clone.querySelector("#cRelative").innerText = data.relative;
 
-  // 4. Handle Images (COMPRESS THEM FIRST)
+  // 4. Handle Images
   const sigFile = document.getElementById("newSignature").files[0];
   let borrowerSig = "";
   if(sigFile) borrowerSig = await compressImage(sigFile);
@@ -225,17 +226,16 @@ async function downloadContractDirectly() {
   if(borrowerSig) { sigImgEl.src = borrowerSig; sigImgEl.style.display = "block"; } 
   else { sigImgEl.style.display = "none"; }
 
-  // Lender Single Sig
   const lenImgEl = clone.querySelector("#cLenderSig");
   const lenLine = clone.querySelector("#cLenderLine");
   
   if(lenderSig) { 
       lenImgEl.src = lenderSig; 
       lenImgEl.style.display = "block";
-      lenLine.style.display = "none"; // Hide line if sig exists
+      lenLine.style.display = "none"; 
   } else { 
       lenImgEl.style.display = "none";
-      lenLine.style.display = "block"; // Show line for manual signing
+      lenLine.style.display = "block"; 
   }
 
   // 5. Generate PDF
@@ -254,7 +254,7 @@ async function downloadContractDirectly() {
   });
 }
 
-// --- CALCULATION LOGIC ---
+// --- CALCULATION LOGIC (UPDATED FOR MESSENGER LIST) ---
 function calculate() {
   const b = borrowers[activeIndex];
   const payDate = document.getElementById("paymentDate").value;
@@ -271,13 +271,25 @@ function calculate() {
 
   let totalPen = 0;
   let isCurrentPenalty = false;
+  let penaltyCount = 0;
+  let timelineText = ""; // Store breakdown text
 
   if (end > start) {
     isCurrentPenalty = true;
     let curr = new Date(start);
     while (new Date(curr.getTime() + b.penaltyHrs * 3600000) <= end) {
+      let next = new Date(curr.getTime() + b.penaltyHrs * 3600000);
+      penaltyCount++;
       totalPen += b.penaltyAmt;
-      curr = new Date(curr.getTime() + b.penaltyHrs * 3600000);
+      
+      // -- UPDATED FORMAT: "1. (Date): ..." --
+      let dateKey = `${curr.getMonth() + 1}/${curr.getDate()}/${curr.getFullYear().toString().slice(-2)}`;
+      let timeStart = curr.toLocaleTimeString([], {hour: "numeric", minute: "2-digit", hour12: true}).toLowerCase();
+      let timeEnd = next.toLocaleTimeString([], {hour: "numeric", minute: "2-digit", hour12: true}).toLowerCase();
+      
+      timelineText += `${penaltyCount}. (${dateKey}): ${timeStart} - ${timeEnd} +₱${b.penaltyAmt}\n\n`;
+      
+      curr = next;
     }
   }
 
@@ -302,14 +314,14 @@ function calculate() {
   `;
   out.style.display = "block";
   
-  return { b, grand, paid, totalPen, isCurrentPenalty };
+  return { b, grand, paid, totalPen, isCurrentPenalty, penaltyCount, timelineText, bal };
 }
 
 // --- SETTINGS ---
 function loadSettings() {
   const sA = localStorage.getItem("gA");
   const sH = localStorage.getItem("gH");
-  const sL = localStorage.getItem("lenderSig"); // Single Sig
+  const sL = localStorage.getItem("lenderSig");
 
   if (sA) globalPenaltyAmt = parseFloat(sA);
   if (sH) globalPenaltyHrs = parseFloat(sH);
@@ -328,8 +340,6 @@ async function saveSettings() {
   localStorage.setItem("gH", globalPenaltyHrs);
 
   const f = document.getElementById("setLenderSig").files[0];
-
-  // COMPRESS BEFORE SAVING
   if (f) { lenderSig = await compressImage(f); localStorage.setItem("lenderSig", lenderSig); }
 
   alert("Settings & Signatures Saved!");
@@ -378,7 +388,7 @@ async function downloadSmartReceipt() {
   alert("Generating Receipt PDF...");
   
   await html2pdf().set(opt).from(element).save().then(() => {
-      // Logic Update only AFTER successful download
+      // Logic Update
       const rem = data.grand - data.paid;
       if (rem <= 0) {
         alert("Paid in full! Borrower removed.");
@@ -396,10 +406,44 @@ async function downloadSmartReceipt() {
   });
 }
 
+// --- COPY TO MESSENGER (FIXED) ---
 function copyToClipboard() {
-  const b = borrowers[activeIndex];
-  const text = `📌 *CM's LENDING*\n👤 ${b.name}\n📅 ${new Date().toLocaleDateString()}\n\n${document.getElementById("output").innerText}\n\nThank you!`;
-  navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+  const data = calculate(); // Get fresh calculation
+  if (!data) return;
+
+  const { b, totalPen, grand, isCurrentPenalty, penaltyCount, timelineText } = data;
+  const interestVal = b.principal * (b.interestRate / 100);
+
+  let statusHeader = "";
+  if (isCurrentPenalty) statusHeader = "⚠️ *STATUS: LATE PAYMENT*";
+  else if (data.bal > 0) statusHeader = "🟠 *STATUS: PARTIAL / OPEN*";
+  else statusHeader = "✅ *STATUS: PAID ON TIME*";
+
+  let text = `📌 *LENDING UPDATE*
+👤 *Borrower:* ${b.name}
+📅 *Date:* ${new Date().toLocaleDateString()}
+--------------------------
+${statusHeader}
+Principal: ₱${formatNumber(b.principal)}
+
+Interest Added: ₱${formatNumber(interestVal)}
+
+Penalty Blocks: ${penaltyCount}
+
+Penalty Total: ₱${formatNumber(totalPen)}
+
+Grand Total: ₱${formatNumber(grand)}
+
+`;
+
+  if (isCurrentPenalty && timelineText) {
+    text += `📑 *FULL BREAKDOWN:*\nDetailed Timeline (Full Breakdown)\n\n${timelineText}`;
+  }
+
+  text += `--------------------------
+Thank you! 🙏`;
+
+  navigator.clipboard.writeText(text).then(() => alert("Copied details to clipboard!"));
 }
 
 function formatInput(i) {
