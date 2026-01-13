@@ -2,16 +2,7 @@
 let borrowers = [],
   activeIndex = -1,
   globalPenaltyAmt = 50,
-<<<<<<< HEAD
-  globalPenaltyHrs = 5,
-  lenderSig1 = "", 
-  lenderSig2 = "";
-=======
   globalPenaltyHrs = 5;
-let isCurrentPenalty = false,
-  isPartial = false,
-  receiptSummaryHTML = "";
->>>>>>> parent of c1f6580 (added contracts but will fix later)
 
 // --- INITIALIZATION ---
 window.onload = function () {
@@ -52,23 +43,11 @@ function renderTabs() {
   borrowers.forEach((b, index) => {
     const btn = document.createElement("button");
     btn.className = `tab-btn ${index === activeIndex ? "active" : ""}`;
-    btn.innerHTML = `<span>${b.name}</span> <small>₱${formatNumber(
-      b.balance
-    )}</small>`;
+    btn.innerHTML = `<span>${b.name}</span> <small>₱${formatNumber(b.balance)}</small>`;
     btn.onclick = () => selectBorrower(index);
     container.appendChild(btn);
   });
-<<<<<<< HEAD
   document.getElementById("creditCount").innerText = `${borrowers.length} Borrowers (Unlimited)`;
-=======
-
-  document.getElementById(
-    "creditCount"
-  ).innerText = `${borrowers.length}/5 Borrowers`;
-
->>>>>>> parent of c1f6580 (added contracts but will fix later)
-  const addBtn = document.querySelector(".add-new-btn");
-  if (addBtn) addBtn.disabled = borrowers.length >= 5;
 }
 
 // --- SCREEN SWITCHING ---
@@ -78,8 +57,6 @@ function showCreateScreen() {
 
   document.getElementById("createScreen").style.display = "block";
   document.getElementById("manageScreen").style.display = "none";
-<<<<<<< HEAD
-<<<<<<< HEAD
   resetManageInputs();
 }
 
@@ -141,49 +118,10 @@ async function saveNewBorrower() {
   b.totalWithInterest = b.principal + (b.principal * (b.interestRate / 100));
   b.balance = b.totalWithInterest;
 
-  // IMPORTANT: We do NOT save the ID image anymore. Too heavy.
   const sigFile = document.getElementById("newSignature").files[0];
   b.signature = await compressImage(sigFile);
 
   borrowers.push(b);
-=======
-=======
-
->>>>>>> parent of 64b39a2 (fix everything)
-  document.getElementById("newBorrowerName").value = "";
-  document.getElementById("newPrincipal").value = "";
-  document.getElementById("newDueDate").value = "";
-
-  resetManageInputs();
-}
-
-function saveNewBorrower() {
-  const name = document.getElementById("newBorrowerName").value;
-  const princ = parseNumber(
-    document.getElementById("newPrincipal").value
-  );
-  const rate = parseFloat(document.getElementById("newInterest").value);
-  const loanDate = document.getElementById("newLoanDate").value;
-  const dueDate = document.getElementById("newDueDate").value;
-
-  if (!name || !princ || !dueDate)
-    return alert("Please fill in all fields.");
-
-  const total = princ + princ * (rate / 100);
-
-  borrowers.push({
-    name,
-    principal: princ,
-    interestRate: rate,
-    totalWithInterest: total,
-    balance: total,
-    loanDate,
-    dueDate,
-    penaltyAmt: globalPenaltyAmt,
-    penaltyHrs: globalPenaltyHrs,
-  });
-
->>>>>>> parent of c1f6580 (added contracts but will fix later)
   saveBorrowersToStorage();
   
   document.getElementById("newBorrowerName").value = "";
@@ -207,23 +145,12 @@ function selectBorrower(index) {
   document.getElementById("displayBorrowerName").innerText = b.name;
   document.getElementById("manageAmount").value = formatNumber(b.balance);
   document.getElementById("manageDueDate").value = b.dueDate;
-<<<<<<< HEAD
-<<<<<<< HEAD
   
   const imgSig = document.getElementById("viewSignature");
   const txtSig = document.getElementById("noSig");
   if (b.signature) { imgSig.src = b.signature; imgSig.style.display = "block"; txtSig.style.display = "none"; } 
   else { imgSig.style.display = "none"; txtSig.style.display = "block"; }
 
-=======
-  document.getElementById("ruleText").innerText = `Rule: ₱${b.penaltyAmt} per ${b.penaltyHrs} hours`;
->>>>>>> parent of c1f6580 (added contracts but will fix later)
-=======
-  document.getElementById(
-    "ruleText"
-  ).innerText = `Rule: ₱${b.penaltyAmt} per ${b.penaltyHrs} hours`;
-
->>>>>>> parent of 64b39a2 (fix everything)
   resetManageInputs();
 }
 
@@ -233,11 +160,7 @@ function resetManageInputs() {
   document.getElementById("paymentDate").value = today;
   document.getElementById("amountPaid").value = "";
   document.getElementById("output").style.display = "none";
-<<<<<<< HEAD
-=======
-  document.getElementById("breakdown").style.display = "none";
   document.getElementById("finalDownloadBtn").style.display = "none";
->>>>>>> parent of c1f6580 (added contracts but will fix later)
   document.getElementById("output").innerHTML = "";
 }
 
@@ -249,24 +172,19 @@ function deleteActiveBorrower() {
   }
 }
 
-<<<<<<< HEAD
 // ==========================================
-// DIRECT PDF DOWNLOAD (CONTRACT)
+// DIRECT PNG DOWNLOAD (CONTRACT)
 // ==========================================
 
 async function downloadContractDirectly() {
-  if (typeof html2pdf === 'undefined') return alert("Library not ready. Please wait a moment.");
-
-  alert("Preparing Contract PDF...");
+  alert("Generating Contract Image...");
 
   // 1. Gather Data
   const data = {
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    lender: document.getElementById("lenderName").value || "_________________",
     name: document.getElementById("newBorrowerName").value || "_________________",
     address: document.getElementById("newAddress").value || "_________________",
     contact: document.getElementById("newContactNumber").value || "_________________",
-    relative: document.getElementById("newRelativeInfo").value || "_________________",
     princ: parseNumber(document.getElementById("newPrincipal").value),
     rate: parseFloat(document.getElementById("newInterest").value),
     dueDate: document.getElementById("newDueDate").value || "_________________",
@@ -277,67 +195,45 @@ async function downloadContractDirectly() {
   const interestAmt = data.princ * (data.rate/100);
   const total = data.princ + interestAmt;
 
-  // 2. Clone Template
-  const source = document.getElementById('contract-template-source');
-  const clone = document.createElement('div');
-  clone.innerHTML = source.innerHTML;
-  
-  // 3. Fill Clone
-  clone.querySelector("#cDate").innerText = data.date;
-  clone.querySelector("#cLender").innerText = data.lender;
-  clone.querySelector("#cBorrower").innerText = data.name;
-  clone.querySelector("#cAddress").innerText = data.address;
-  clone.querySelector("#cContact").innerText = data.contact;
-  clone.querySelector("#cPrincipal").innerText = formatNumber(data.princ);
-  clone.querySelector("#cRate").innerText = data.rate;
-  clone.querySelector("#cInterest").innerText = formatNumber(interestAmt);
-  clone.querySelector("#cTotal").innerText = formatNumber(total);
-  clone.querySelector("#cDueDate").innerText = data.dueDate;
-  clone.querySelector("#cPenaltyAmt").innerText = data.penAmt;
-  clone.querySelector("#cPenaltyHrs").innerText = data.penHrs;
-  clone.querySelector("#cRelative").innerText = data.relative;
+  // 2. Fill the Hidden Template
+  document.getElementById("cDate").innerText = data.date;
+  document.getElementById("cBorrower").innerText = data.name;
+  document.getElementById("cAddress").innerText = data.address;
+  document.getElementById("cContact").innerText = data.contact;
+  document.getElementById("cPrincipal").innerText = formatNumber(data.princ);
+  document.getElementById("cRate").innerText = data.rate;
+  document.getElementById("cInterest").innerText = formatNumber(interestAmt);
+  document.getElementById("cTotal").innerText = formatNumber(total);
+  document.getElementById("cDueDate").innerText = data.dueDate;
+  document.getElementById("cPenaltyAmt").innerText = data.penAmt;
+  document.getElementById("cPenaltyHrs").innerText = data.penHrs;
 
-  // 4. Handle Images
+  // 3. Handle Signature
   const sigFile = document.getElementById("newSignature").files[0];
-  let borrowerSig = "";
-  if(sigFile) borrowerSig = await compressImage(sigFile);
-
-  const sigImgEl = clone.querySelector("#cSigImage");
-  if(borrowerSig) { sigImgEl.src = borrowerSig; sigImgEl.style.display = "block"; } 
-  else { sigImgEl.style.display = "none"; }
-
-  const lenImgEl = clone.querySelector("#cLenderSig");
-  const lenLine = clone.querySelector("#cLenderLine");
+  const sigImgEl = document.getElementById("cSigImage");
   
-  if(lenderSig) { 
-      lenImgEl.src = lenderSig; 
-      lenImgEl.style.display = "block";
-      lenLine.style.display = "none"; 
-  } else { 
-      lenImgEl.style.display = "none";
-      lenLine.style.display = "block"; 
+  if (sigFile) {
+      const sigData = await compressImage(sigFile);
+      sigImgEl.src = sigData;
+      sigImgEl.style.display = "block";
+  } else {
+      sigImgEl.style.display = "none";
   }
 
-  // 5. Generate PDF
-  const opt = {
-    margin: 0.5,
-    filename: `Contract_${data.name}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 1.5, useCORS: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
-
-  html2pdf().set(opt).from(clone).save().then(() => {
-    // Success
+  // 4. Capture & Download PNG
+  const element = document.getElementById("contract-capture-area");
+  
+  html2canvas(element, { scale: 2 }).then(canvas => {
+      const link = document.createElement("a");
+      link.download = `Contract_${data.name}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
   }).catch(err => {
-    alert("PDF Error: " + err.message);
+      alert("Image Error: " + err.message);
   });
 }
 
-// --- CALCULATION LOGIC (UPDATED FOR MESSENGER LIST) ---
-=======
-// --- CALCULATE ---
->>>>>>> parent of c1f6580 (added contracts but will fix later)
+// --- CALCULATION LOGIC ---
 function calculate() {
   const b = borrowers[activeIndex];
   const payDate = document.getElementById("paymentDate").value;
@@ -351,28 +247,19 @@ function calculate() {
 
   const end = new Date(payDate + "T" + payTime + ":00");
 
-<<<<<<< HEAD
   let totalPen = 0;
   let isCurrentPenalty = false;
   let penaltyCount = 0;
   let timelineText = ""; // Store breakdown text
-=======
-  let totalPen = 0,
-    count = 0,
-    detailed = "<h3>Details</h3>",
-    dailyCounts = {};
->>>>>>> parent of 64b39a2 (fix everything)
 
   if (end > start) {
     isCurrentPenalty = true;
     let curr = new Date(start);
-<<<<<<< HEAD
     while (new Date(curr.getTime() + b.penaltyHrs * 3600000) <= end) {
       let next = new Date(curr.getTime() + b.penaltyHrs * 3600000);
       penaltyCount++;
       totalPen += b.penaltyAmt;
       
-      // -- UPDATED FORMAT: "1. (Date): ..." --
       let dateKey = `${curr.getMonth() + 1}/${curr.getDate()}/${curr.getFullYear().toString().slice(-2)}`;
       let timeStart = curr.toLocaleTimeString([], {hour: "numeric", minute: "2-digit", hour12: true}).toLowerCase();
       let timeEnd = next.toLocaleTimeString([], {hour: "numeric", minute: "2-digit", hour12: true}).toLowerCase();
@@ -381,54 +268,12 @@ function calculate() {
       
       curr = next;
     }
-=======
-
-    while (
-      new Date(curr.getTime() + b.penaltyHrs * 3600000) <= end
-    ) {
-      let next = new Date(
-        curr.getTime() + b.penaltyHrs * 3600000
-      );
-      count++;
-      totalPen += b.penaltyAmt;
-
-      let key = `${curr.getMonth() + 1}/${curr.getDate()}/${curr
-        .getFullYear()
-        .toString()
-        .slice(-2)}`;
-
-      if (!dailyCounts[key]) dailyCounts[key] = 0;
-      dailyCounts[key]++;
-
-      detailed += `<p style="border-bottom:1px solid #eee;font-size:0.85em;">
-        <b>${key}:</b> ${curr.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${next.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-        <span style="float:right;">+₱${b.penaltyAmt}</span>
-      </p>`;
-
-      curr = next;
-    }
   } else {
     isCurrentPenalty = false;
   }
 
-  receiptSummaryHTML = "";
-  for (const [k, v] of Object.entries(dailyCounts)) {
-    receiptSummaryHTML += `${k}: ${v} blocks (₱${formatNumber(
-      v * b.penaltyAmt
-    )})\n`;
->>>>>>> parent of 64b39a2 (fix everything)
-  }
-
   const grand = b.balance + totalPen;
-  const inputPaid = parseNumber(
-    document.getElementById("amountPaid").value
-  );
+  const inputPaid = parseNumber(document.getElementById("amountPaid").value);
   const paid = inputPaid > 0 ? inputPaid : grand;
   const bal = grand - paid;
   const isPartial = bal > 0;
@@ -436,20 +281,8 @@ function calculate() {
   const out = document.getElementById("output");
   
   out.innerHTML = `
-    <h3 style="color:${
-      isPartial
-        ? "#d35400"
-        : isCurrentPenalty
-        ? "#c0392b"
-        : "#27ae60"
-    };">
-      ${
-        isPartial
-          ? "PARTIAL PAYMENT"
-          : isCurrentPenalty
-          ? "LATE PAYMENT"
-          : "PAID ON TIME"
-      }
+    <h3 style="color:${isPartial ? "#d35400" : isCurrentPenalty ? "#c0392b" : "#27ae60"};">
+      ${isPartial ? "PARTIAL PAYMENT" : isCurrentPenalty ? "LATE PAYMENT" : "PAID ON TIME"}
     </h3>
     <p>Prev Balance: ₱${formatNumber(b.balance)}</p>
     <p>Penalty: ₱${formatNumber(totalPen)}</p>
@@ -458,16 +291,10 @@ function calculate() {
     <p style="color:#27ae60;font-size:1.1em;">
       <b>Paying: ₱${formatNumber(paid)}</b>
     </p>
-    ${
-      isPartial
-        ? `<p style="color:#d35400;">Remaining: ₱${formatNumber(
-            bal
-          )}</p>`
-        : ""
-    }
+    ${isPartial ? `<p style="color:#d35400;">Remaining: ₱${formatNumber(bal)}</p>` : ""}
   `;
   out.style.display = "block";
-<<<<<<< HEAD
+  document.getElementById("finalDownloadBtn").style.display = "block";
   
   return { b, grand, paid, totalPen, isCurrentPenalty, penaltyCount, timelineText, bal };
 }
@@ -476,30 +303,9 @@ function calculate() {
 function loadSettings() {
   const sA = localStorage.getItem("gA");
   const sH = localStorage.getItem("gH");
-  const sL = localStorage.getItem("lenderSig");
-=======
-
-  if (count > 0) {
-    document.getElementById("breakdown").innerHTML = detailed;
-    document.getElementById("breakdown").style.display = "block";
-  } else {
-    document.getElementById("breakdown").style.display = "none";
-  }
-
-<<<<<<< HEAD
-// --- MISSING FUNCTIONS RESTORED ---
->>>>>>> parent of c1f6580 (added contracts but will fix later)
-
-// 1. SETTINGS
-function loadSettings() {
-  const sA = localStorage.getItem("gA"), sH = localStorage.getItem("gH");
   if (sA) globalPenaltyAmt = parseFloat(sA);
   if (sH) globalPenaltyHrs = parseFloat(sH);
-<<<<<<< HEAD
-  if (sL) lenderSig = sL;
-
-=======
->>>>>>> parent of c1f6580 (added contracts but will fix later)
+  
   document.getElementById("setPenaltyAmount").value = globalPenaltyAmt;
   document.getElementById("setPenaltyHours").value = globalPenaltyHrs;
 }
@@ -509,60 +315,50 @@ function saveSettings() {
   globalPenaltyHrs = parseFloat(document.getElementById("setPenaltyHours").value);
   localStorage.setItem("gA", globalPenaltyAmt);
   localStorage.setItem("gH", globalPenaltyHrs);
-<<<<<<< HEAD
 
-  const f = document.getElementById("setLenderSig").files[0];
-  if (f) { lenderSig = await compressImage(f); localStorage.setItem("lenderSig", lenderSig); }
-
-  alert("Settings & Signatures Saved!");
-=======
->>>>>>> parent of c1f6580 (added contracts but will fix later)
+  alert("Settings Saved!");
   document.getElementById("settingsModal").style.display = "none";
 }
 window.onclick = function (e) {
   if (e.target == document.getElementById("settingsModal")) document.getElementById("settingsModal").style.display = "none";
 };
 
-<<<<<<< HEAD
-// --- DOWNLOAD RECEIPT AS PDF ---
+// ==========================================
+// RECEIPT GENERATION (PNG) - FIXED
+// ==========================================
 async function downloadSmartReceipt() {
-  const data = calculate();
+  const data = calculate(); // Recalculate to ensure data integrity
   if (!data) return; 
 
-  const element = document.createElement("div");
-  element.style.padding = "20px";
-  element.style.width = "400px";
-  element.style.fontFamily = "Arial, sans-serif";
-  element.style.background = "white";
-  element.style.color = "black";
-  
-  element.innerHTML = `
-    <h2 style="text-align:center; margin:0;">OFFICIAL RECEIPT</h2>
-    <p style="text-align:center; font-size:12px;">CM's LENDING</p><hr>
-    <p><b>Date:</b> ${new Date().toLocaleString()}</p>
-    <p><b>Borrower:</b> ${data.b.name}</p>
-    <p><b>Due Date:</b> ${data.b.dueDate}</p><hr>
-    <p>Prev Balance: ₱${formatNumber(data.b.balance)}</p>
-    <p>Penalty: ₱${formatNumber(data.totalPen)}</p>
-    <p><b>Total Due: ₱${formatNumber(data.grand)}</b></p>
-    <p style="font-size:1.2em;"><b>PAID: ₱${formatNumber(data.paid)}</b></p>
-    ${data.grand - data.paid > 0 ? `<p style="color:red;">Remaining: ₱${formatNumber(data.grand - data.paid)}</p>` : ''}
-    <hr>
-    <p style="text-align:center;font-weight:bold;">THANK YOU!</p>
-  `;
+  alert("Generating Receipt Image...");
 
-  const opt = {
-    margin: 0.2,
-    filename: `Receipt_${data.b.name}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 1.5, useCORS: true },
-    jsPDF: { unit: 'in', format: [4, 6], orientation: 'portrait' } 
-  };
-
-  alert("Generating Receipt PDF...");
+  // 1. Populate Hidden Receipt Template
+  document.getElementById("rDate").innerText = new Date().toLocaleString();
+  document.getElementById("rName").innerText = data.b.name;
+  document.getElementById("rDueDate").innerText = data.b.dueDate;
+  document.getElementById("rPrev").innerText = "₱" + formatNumber(data.b.balance);
+  document.getElementById("rPen").innerText = "₱" + formatNumber(data.totalPen);
+  document.getElementById("rTotal").innerText = "₱" + formatNumber(data.grand);
+  document.getElementById("rPaid").innerText = "₱" + formatNumber(data.paid);
   
-  await html2pdf().set(opt).from(element).save().then(() => {
-      // Logic Update
+  const remEl = document.getElementById("rRemContainer");
+  if (data.grand - data.paid > 0) {
+      document.getElementById("rRem").innerText = "₱" + formatNumber(data.grand - data.paid);
+      remEl.style.display = "block";
+  } else {
+      remEl.style.display = "none";
+  }
+
+  // 2. Capture and Download
+  const element = document.getElementById("receipt-capture-area");
+  
+  await html2canvas(element, { scale: 2 }).then(canvas => {
+      const link = document.createElement("a");
+      link.download = `Receipt_${data.b.name}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      
+      // 3. Update Logic AFTER download
       const rem = data.grand - data.paid;
       if (rem <= 0) {
         alert("Paid in full! Borrower removed.");
@@ -575,59 +371,13 @@ async function downloadSmartReceipt() {
         saveBorrowersToStorage();
         selectBorrower(activeIndex);
       }
-  }).catch((err) => {
-      alert("Error generating Receipt: " + err.message);
+      
+  }).catch(err => {
+      alert("Receipt Error: " + err.message);
   });
 }
 
-// --- COPY TO MESSENGER (FIXED) ---
-=======
-// 2. DOWNLOAD RECEIPT
-async function downloadSmartReceipt() {
-  const b = borrowers[activeIndex];
-  const name = b.name;
-  const summary = document.getElementById("output").innerText;
-
-  // Generate Receipt HTML
-  document.getElementById("receipt-content").innerHTML = `
-    <h2 style="text-align:center;">OFFICIAL RECEIPT</h2>
-    <p style="text-align:center;font-size:12px;">CM's LENDING</p><hr>
-    <p><b>Date:</b> ${new Date().toLocaleString()}</p>
-    <p><b>Borrower:</b> ${name}</p>
-    <p><b>Due Date:</b> ${b.dueDate}</p><hr>
-    <pre style="white-space:pre-wrap;font-family:inherit;">${summary}</pre><hr>
-    ${isCurrentPenalty ? `<p><b>PENALTY SUMMARY:</b></p><pre style="font-size:12px;white-space:pre-wrap;font-family:inherit;">${receiptSummaryHTML}</pre><hr>` : ''}
-    <p style="text-align:center;font-weight:bold;">THANK YOU!</p>`;
-
-  // Capture
-  const canvas = await html2canvas(document.getElementById("final-receipt-image"));
-  const link = document.createElement("a");
-  link.download = `Receipt_${name}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-
-  // Update Data Logic
-  const grandStr = document.getElementById("output").innerHTML.match(/Total Due: ₱([\d,.]+)/)[1];
-  const grand = parseNumber(grandStr);
-  const paidStr = document.getElementById("output").innerHTML.match(/Paying: ₱([\d,.]+)/)[1];
-  const paid = parseNumber(paidStr);
-  const rem = grand - paid;
-
-  if (rem <= 0) {
-    alert("Paid in full! Borrower removed.");
-    borrowers.splice(activeIndex, 1);
-    saveBorrowersToStorage();
-    showCreateScreen();
-  } else {
-    alert(`Partial payment recorded. New Balance: ₱${formatNumber(rem)}`);
-    b.balance = rem;
-    saveBorrowersToStorage();
-    selectBorrower(activeIndex); // Refresh view
-  }
-}
-
-// 3. COPY TO MESSENGER
->>>>>>> parent of c1f6580 (added contracts but will fix later)
+// --- COPY TO MESSENGER ---
 function copyToClipboard() {
   const data = calculate(); // Get fresh calculation
   if (!data) return;
@@ -665,10 +415,6 @@ Grand Total: ₱${formatNumber(grand)}
 Thank you! 🙏`;
 
   navigator.clipboard.writeText(text).then(() => alert("Copied details to clipboard!"));
-=======
-  document.getElementById("finalDownloadBtn").style.display =
-    "block";
->>>>>>> parent of 64b39a2 (fix everything)
 }
 
 // --- HELPERS ---
@@ -684,18 +430,6 @@ function formatInput(i) {
   else i.value = "";
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-const menuBtn = document.getElementById("menuToggle");
-const sidebar = document.querySelector(".sidebar");
-const overlay = document.getElementById("sidebarOverlay");
-if (menuBtn) {
-  menuBtn.onclick = () => { sidebar.classList.add("show"); overlay.classList.add("show"); };
-  overlay.onclick = () => { sidebar.classList.remove("show"); overlay.classList.remove("show"); };
-}
-=======
-// --- MOBILE SIDEBAR LOGIC ---
-=======
 function parseNumber(v) {
   if (!v) return 0;
   return parseFloat(v.toString().replace(/,/g, "")) || 0;
@@ -707,38 +441,22 @@ function formatNumber(n) {
     maximumFractionDigits: 2,
   });
 }
-/* ==================================================
-   MOBILE SIDEBAR TOGGLE (SAFE)
-   ================================================== */
 
->>>>>>> parent of 64b39a2 (fix everything)
+// --- MOBILE SIDEBAR TOGGLE ---
 const menuBtn = document.getElementById("menuToggle");
 const sidebar = document.querySelector(".sidebar");
 const overlay = document.getElementById("sidebarOverlay");
-
-if (menuBtn && sidebar && overlay) {
-  menuBtn.onclick = () => {
-    sidebar.classList.add("show");
-    overlay.classList.add("show");
-  };
-
-  overlay.onclick = () => {
-    sidebar.classList.remove("show");
-    overlay.classList.remove("show");
-  };
+if (menuBtn) {
+  menuBtn.onclick = () => { sidebar.classList.add("show"); overlay.classList.add("show"); };
+  overlay.onclick = () => { sidebar.classList.remove("show"); overlay.classList.remove("show"); };
 }
 
-/* Auto-close sidebar after selecting borrower (mobile UX) */
+// Auto-close sidebar on mobile selection
 const originalSelectBorrower = selectBorrower;
 selectBorrower = function(index) {
   originalSelectBorrower(index);
-
   if (window.innerWidth <= 768) {
     sidebar.classList.remove("show");
     overlay.classList.remove("show");
   }
 };
-<<<<<<< HEAD
->>>>>>> parent of c1f6580 (added contracts but will fix later)
-=======
->>>>>>> parent of 64b39a2 (fix everything)
