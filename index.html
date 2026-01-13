@@ -21,7 +21,6 @@
       <input type="number" id="setPenaltyAmount" placeholder="50">
       <label>Penalty Interval (Hours)</label>
       <input type="number" id="setPenaltyHours" placeholder="5">
-<<<<<<< HEAD
       <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
       
       <h4 style="margin: 0 0 10px 0; color: #555;">✍️ Lenders Signature</h4>
@@ -31,9 +30,6 @@
       <input type="file" id="setLenderSig" accept="image/*">
       
       <button class="save-btn" onclick="saveSettings()">💾 Save Settings</button>
-=======
-      <button class="save-btn" onclick="saveSettings()">Save & Close</button>
->>>>>>> parent of c1f6580 (added contracts but will fix later)
     </div>
   </div>
 
@@ -59,7 +55,6 @@
         <h1>Create New Loan</h1>
 
         <div class="section-box">
-<<<<<<< HEAD
           <label>Lender Name(s)</label>
           <input type="text" id="lenderName" placeholder="e.g., Mr. & Mrs. Rodeadilla">
           <hr style="border:0; border-top:1px dashed #ccc; margin: 20px 0;">
@@ -69,11 +64,6 @@
           <input type="text" id="newAddress" placeholder="Complete Address">
           <label>Contact Number</label>
           <input type="tel" id="newContactNumber" placeholder="0912 345 6789">
-=======
-          <label>Borrower's Name</label>
-          <input type="text" id="newBorrowerName">
-
->>>>>>> parent of c1f6580 (added contracts but will fix later)
           <div class="row">
             <div class="half">
               <label>Principal (₱)</label>
@@ -90,7 +80,6 @@
 
           <label style="color:#d35400;">Payment Due Date</label>
           <input type="date" id="newDueDate">
-<<<<<<< HEAD
           <label>Relative's Info</label>
           <input type="text" id="newRelativeInfo" placeholder="Emergency Contact">
           
@@ -107,11 +96,6 @@
              <button class="copy-btn" onclick="downloadContractDirectly()" style="flex:1; min-width: 200px;">⬇️ Download Contract (PDF)</button>
              <button class="save-borrower-btn" onclick="saveNewBorrower()" style="flex:1; min-width: 200px;">💾 Save Data</button>
           </div>
-=======
-          <small>*Penalty starts the day AFTER this date.</small>
-
-          <button class="save-borrower-btn" onclick="saveNewBorrower()">💾 Save Borrower</button>
->>>>>>> parent of c1f6580 (added contracts but will fix later)
         </div>
       </div>
 
@@ -121,7 +105,6 @@
           <h1 id="displayBorrowerName"></h1>
           <button class="delete-icon" onclick="deleteActiveBorrower()">🗑️</button>
         </div>
-<<<<<<< HEAD
         
         <div class="section-box" style="background:#f0f8ff;">
           <details>
@@ -133,8 +116,6 @@
             </div>
           </details>
         </div>
-=======
->>>>>>> parent of c1f6580 (added contracts but will fix later)
 
         <div class="section-box locked-info">
           <div class="row">
@@ -151,7 +132,6 @@
 
         <div class="section-box">
           <h3>Payment Entry</h3>
-<<<<<<< HEAD
           <label>Payment Date</label><input type="date" id="paymentDate">
           <label>Payment Time</label><input type="time" id="paymentTime">
           <label style="color:#27ae60;">Amount Paid</label><input type="text" id="amountPaid" oninput="formatInput(this)">
@@ -160,25 +140,6 @@
         <div class="button-group" style="margin-top: 10px;">
           <button class="calc-btn" onclick="calculate()">🔎 Calculate Breakdown</button>
           <button class="copy-btn" onclick="copyToClipboard()">📋 Copy to Messenger</button>
-=======
-
-          <label>Payment Date</label>
-          <input type="date" id="paymentDate">
-
-          <label>Payment Time</label>
-          <input type="time" id="paymentTime">
-
-          <label style="color:#27ae60;">Amount Paid</label>
-          <input type="text" id="amountPaid" oninput="formatInput(this)">
-
-          <div class="rule-box" id="ruleText"></div>
-        </div>
-
-        <div class="button-group">
-          <button class="calc-btn" onclick="calculate()">Calculate</button>
-          <button id="finalDownloadBtn" class="download-btn" style="display:none;" onclick="downloadSmartReceipt()">📥 Download Receipt</button>
-          <button class="copy-btn" onclick="copyToClipboard()">📋 Copy</button>
->>>>>>> parent of c1f6580 (added contracts but will fix later)
         </div>
 
         <div id="output" class="output-box"></div>
@@ -187,7 +148,6 @@
     </div>
   </div>
 
-<<<<<<< HEAD
   <div id="contract-template-source" style="display:none;">
     <div style="width: 100%; background: white; padding: 40px; color: black; font-family: 'Times New Roman', serif; position: relative;">
       <h2 style="text-align: center; text-decoration: underline; margin-bottom: 20px;">LOAN AGREEMENT</h2>
@@ -250,11 +210,6 @@
         </div>
       </div>
     </div>
-=======
-  <!-- RECEIPT -->
-  <div id="final-receipt-image" style="position:absolute;left:-9999px;width:400px;background:white;padding:30px;">
-    <div id="receipt-content"></div>
->>>>>>> parent of c1f6580 (added contracts but will fix later)
   </div>
 
   <script src="script.js"></script>
